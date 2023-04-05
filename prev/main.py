@@ -11,7 +11,7 @@
 # "The tanned skin of his arms and face glistened (spacy: VBN, stanza: VBD) with sweat."
 # "The decision to free him rests (spacy:NOUN, stanza:VBZ) with the Belgian Justice Minister."
 
-# The package takes plain English text as input and outputs instances of "verb + preposition + noun groups" where the verb dominates the preposition. 
+# The package takes plain English text as input and outputs instances of "verb + preposition + noun groups" where the verb dominates the preposition.
 
 # For example, it will find "goes over" in "She goes over the question". However, it may not identify "goes over" in the sentence "Someone goes over there" because the "goes over" here is not used as a phrasal verb but in the literal meaning.
 
@@ -36,7 +36,10 @@ class PREVUI:
             dest="is_pretokenized",
             action="store_true",
             default=False,
-            help="Specify that input texts have already been tokenized to newline-separated sentences. This option by default is False.",
+            help=(
+                "Specify that input texts have already been tokenized to newline-separated"
+                " sentences. This option by default is False."
+            ),
         )
         args_parser.add_argument(
             "--visualize",
@@ -51,6 +54,13 @@ class PREVUI:
             action="store_true",
             default=False,
             help="Ignore existing svg files and intermediate annotated files (*.pkl).",
+        )
+        args_parser.add_argument(
+            "--no-query",
+            dest="is_no_query",
+            action="store_true",
+            default=False,
+            help="Just parse texts and exit.",
         )
         args_parser.add_argument(
             "-t",
@@ -91,8 +101,9 @@ class PREVUI:
         else:
             options.is_refresh = True
         self.init_kwargs = {
-            "is_pretokenized":options.is_pretokenized,
-            "is_refresh":options.is_refresh,
+            "is_pretokenized": options.is_pretokenized,
+            "is_refresh": options.is_refresh,
+            "is_no_query": options.is_no_query,
             "is_visualize": options.is_visualize,
             "print_what": options.print_what,
         }
@@ -106,14 +117,16 @@ class PREVUI:
         else:
             return (
                 False,
-                f"Error: Python {v_info.major}.{v_info.minor} is not supported."
-                " VerbPrepExtractor only supports Python 3.6 -- 3.9, because the master branch"
-                " of Stanza"
-                " (https://github.com/stanfordnlp/stanza/issues/951#issuecomment-1035616707)"
-                " only supports up to 3.9. You can install a 3.9 verion"
-                " (https://www.python.org/downloads/) and run VerbPrepExtractor in a virtual"
-                " environment with `virtualenv`"
-                " (https://virtualenv.pypa.io/en/latest/index.html).",
+                (
+                    f"Error: Python {v_info.major}.{v_info.minor} is not supported."
+                    " PREV only supports Python 3.6 -- 3.9, because the master branch"
+                    " of Stanza"
+                    " (https://github.com/stanfordnlp/stanza/issues/951#issuecomment-1035616707)"
+                    " only supports up to 3.9. You can install a 3.9 verion"
+                    " (https://www.python.org/downloads/) and run PREV in a virtual"
+                    " environment with `virtualenv`"
+                    " (https://virtualenv.pypa.io/en/latest/index.html)."
+                ),
             )
 
     def run_tmpl(func):  # type: ignore
@@ -129,11 +142,13 @@ class PREVUI:
 
     def run_on_text(self) -> PREVProcedureResult:
         from .prev import PREV
+
         extractor = PREV(**self.init_kwargs)
         return extractor.run_on_text(self.options.text)
 
     def run_on_ifiles(self) -> PREVProcedureResult:
         from .prev import PREV
+
         extractor = PREV(**self.init_kwargs)
         return extractor.run_on_ifiles(self.verified_ifile_list)  # type:ignore
 
