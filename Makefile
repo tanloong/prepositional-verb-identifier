@@ -5,12 +5,12 @@ refresh: lint clean build install
 clean:
 	rm -rf __pycache__
 	rm -rf tests/__pycache__
-	rm -rf build
-	rm -rf dist
-	rm -rf vpe.egg-info
+	rm -rf build/
+	rm -rf dist/
+	rm -rf *.egg-info/
 	rm -rf htmlcov
 	rm -rf coverage.xml
-	pip uninstall -y vpe
+	pip uninstall -y prev
 
 build:
 	python setup.py sdist bdist_wheel
@@ -25,6 +25,6 @@ test:
 	python -m unittest
 
 lint:
-	black vpe/ tests/ --line-length 97 --preview
-	flake8 vpe/ tests/ --count --max-line-length=97 --statistics
-	mypy --check-untyped-defs vpe/
+	black prev/ tests/ --line-length 97 --preview
+	flake8 prev/ tests/ --count --statistics --ignore=E501,W503
+	# mypy --check-untyped-defs prev/

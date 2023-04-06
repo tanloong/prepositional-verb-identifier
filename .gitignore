@@ -1,3 +1,6 @@
 *.pkl
 *.svg
 *.pyc
+*.egg-info/
+build/
+dist/
