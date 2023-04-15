@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding=utf-8 -*-
-import os
-import sys
-import pickle
-from typing import List
-from stanza.models.common.doc import Document as Doc_stanza
 import json
+import os
+import pickle
+import sys
+from typing import List
 
 import spacy
 from spacy import displacy
@@ -13,6 +12,7 @@ from spacy.matcher import DependencyMatcher
 from spacy.tokens import Doc as Doc_spacy
 from spacy.tokens.span import Span
 import stanza
+from stanza.models.common.doc import Document as Doc_stanza
 
 from .util import PREVProcedureResult
 
@@ -65,7 +65,7 @@ class PREV:
             print(f"POS tagging {ifile}...")
             doc_stanza = self.nlp_stanza(text)
             with open(json_file, "w") as f:
-                f.write(json.dumps(doc_stanza.to_dict()))
+                f.write(json.dumps(doc_stanza.to_dict())) # type:ignore
             print(f"POS tagged file saved in {json_file}.")
         return doc_stanza
 
@@ -268,11 +268,9 @@ class PREV:
                             results_sent += result_sent + "\n"
                     results_sent = results_sent.strip()
                     if self.print_what == "matched" and results_sent:
-                        #print(sent.text + "\n" + results_sent)
                         ofile_handler.write(sent.text + "\n" + results_sent + "\n")
                     elif self.print_what == "unmatched" and not results_sent:
                         ofile_handler.write(sent.text + "\n")
-                        #print(sent.text)
         except KeyboardInterrupt:
             ofile_handler.close()
             if os.path.exists(ofile):
@@ -286,6 +284,7 @@ class PREV:
         if not self.is_refresh and os.path.exists(ofile):
             print(f"{ofile} already exists, skipped.")
             return True, None
+        print(f"Matching against {ifile}...")
         with open(ifile, "r", encoding="utf-8") as f:
             text = f.read()
         return self.run_on_text(text, ifile, ofile)
