@@ -10,7 +10,10 @@ clean:
 	rm -rf *.egg-info/
 	rm -rf htmlcov
 	rm -rf coverage.xml
-	pip uninstall -y prev
+	rm *.matched
+	rm *.pkl
+	rm *._trees/
+	# pip uninstall -y prev
 
 build:
 	python setup.py sdist bdist_wheel

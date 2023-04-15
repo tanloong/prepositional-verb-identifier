@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding=utf-8 -*-
 import os
+import sys
 import pickle
 from typing import List
+from stanza.models.common.doc import Document as Doc_stanza
+import json
 
 import spacy
 from spacy import displacy
 from spacy.matcher import DependencyMatcher
-from spacy.tokens import Doc
+from spacy.tokens import Doc as Doc_spacy
 from spacy.tokens.span import Span
 import stanza
 
@@ -53,26 +56,26 @@ class PREV:
         self.nlp_spacy = spacy.load("en_core_web_sm")
 
     def build_doc_stanza(self, text: str, ifile: str):
-        pkl_file = ifile.replace(".tokenized", "").replace(".txt", "") + "_pos-parsed.pkl"
-        if not self.is_refresh and os.path.exists(pkl_file):
-            print(f"{pkl_file} already exists. POS tagging skipped.")
-            with open(pkl_file, "rb") as f:
-                doc_stanza = pickle.load(f)
+        json_file = ifile.replace(".tokenized", "").replace(".txt", "") + "_pos-parsed.json"
+        if not self.is_refresh and os.path.exists(json_file):
+            print(f"{json_file} already exists. POS tagging skipped.")
+            with open(json_file, "r") as f:
+                doc_stanza = Doc_stanza(json.load(f))
         else:
             print(f"POS tagging {ifile}...")
             doc_stanza = self.nlp_stanza(text)
-            with open(pkl_file, "wb") as f:
-                pickle.dump(doc_stanza, f)
-            print(f"POS tagged file saved in {pkl_file}.")
+            with open(json_file, "w") as f:
+                f.write(json.dumps(doc_stanza.to_dict()))
+            print(f"POS tagged file saved in {json_file}.")
         return doc_stanza
 
     def build_doc_spacy(self, text: str, ifile: str):
         """assign POS tags by doc_stanza to doc_spacy"""
-        pkl_file = ifile.replace(".tokenized", "").replace(".txt", "") + "_dep-parsed.pkl"
-        if not self.is_refresh and os.path.exists(pkl_file):
-            print(f"{pkl_file} already exists. Dependency parsing skipped.")
-            with open(pkl_file, "rb") as f:
-                doc_spacy = pickle.load(f)
+        json_file = ifile.replace(".tokenized", "").replace(".txt", "") + "_dep-parsed.json"
+        if not self.is_refresh and os.path.exists(json_file):
+            print(f"{json_file} already exists. Dependency parsing skipped.")
+            with open(json_file, "r") as f:
+                doc_spacy = Doc_spacy(self.nlp_spacy.vocab).from_json(json.load(f))
         else:
             print(f"Dependency parsing {ifile}...")
             doc_stanza = self.build_doc_stanza(text, ifile)
@@ -85,7 +88,7 @@ class PREV:
             is_sent_start = [False for _ in words_stanza]
             for sent_start_id in sent_start_ids:
                 is_sent_start[sent_start_id] = True
-            doc_spacy = Doc(
+            doc_spacy = Doc_spacy(
                 self.nlp_spacy.vocab,
                 words=[word.text for word in words_stanza],
                 sent_starts=is_sent_start,  # type:ignore
@@ -94,9 +97,9 @@ class PREV:
                 token.pos_ = words_stanza[i].pos
                 token.tag_ = words_stanza[i].xpos
             doc_spacy = self.nlp_spacy(doc_spacy)
-            with open(pkl_file, "wb") as f:
-                pickle.dump(doc_spacy, f)
-            print(f"Dependency parsed result saved in {pkl_file}.")
+            with open(json_file, "w") as f:
+                f.write(json.dumps(doc_spacy.to_json()))
+            print(f"Dependency parsed result saved in {json_file}.")
         return doc_spacy
 
     def draw_tree(self, sent_spacy: Span, ifile: str) -> None:
@@ -141,6 +144,28 @@ class PREV:
                         "LEFT_ID": "adverbial",
                         # B is a right immediate sibling of A, i.e., A and B have the same parent and A.i == B.i - 1.
                         "REL_OP": "$+",
+                        "RIGHT_ID": "prep",
+                        "RIGHT_ATTRS": {"ORTH": prep, "DEP": "prep"},
+                    },
+                ]
+            )
+            patterns.append(
+                [
+                    {
+                        "RIGHT_ID": "verb",
+                        "RIGHT_ATTRS": {"TAG": {"REGEX": "^VB[^N]?$"}},
+                    },
+                    {
+                        "LEFT_ID": "verb",
+                        "REL_OP": ".",
+                        "RIGHT_ID": "adverbial",
+                        "RIGHT_ATTRS": {
+                            "DEP": "advmod",
+                        },
+                    },
+                    {
+                        "LEFT_ID": "adverbial",
+                        "REL_OP": "<+",
                         "RIGHT_ID": "prep",
                         "RIGHT_ATTRS": {"ORTH": prep, "DEP": "prep"},
                     },
@@ -231,45 +256,62 @@ class PREV:
         # each token_id corresponds to one pattern dict
         for match in matches:
             _, token_ids = match
-            # verb_id = token_ids[0]
-            result_sent += (
-                ", ".join(
-                    pattern[i]["RIGHT_ID"] + ": " + sent_spacy[token_ids[i]].text
-                    for i in range(len(token_ids))
-                )
-                + "\n"
-            )
+            for i in range(len(token_ids)):
+                right_id = pattern[i]["RIGHT_ID"]
+                node = sent_spacy[token_ids[i]]
+                result_sent += f"{right_id}: {node.text}_{node.lemma_}, "
+            result_sent += '\n'
+
+            # add coordinated verb
+            verb_id = token_ids[0]
+            verb_node = sent_spacy[verb_id]
+            if verb_node.head.pos_ == "VERB" and verb_node.dep_ == 'conj':
+                result_sent += f"verb: {verb_node.head.text}_{verb_node.head.lemma_}, "
+                for i in range(1, len(token_ids)):
+                    right_id = pattern[i]["RIGHT_ID"]
+                    node = sent_spacy[token_ids[i]]
+                    result_sent += f"{right_id}: {node.text}_{node.lemma_}, "
+            result_sent += '\n'
+
         return result_sent.strip()
 
-    def run_on_text(self, text: str, ifile="cmdline_text") -> PREVProcedureResult:
+    def run_on_text(self, text: str, ifile="cmdline_text", ofile=None) -> PREVProcedureResult:
+        if ofile is None:
+            ofile = "cmdline_text" + "." + self.print_what
         doc_spacy = self.build_doc_spacy(text, ifile)
-        # matched_doc = []
-        # unmatched_doc = []
-        for sent in doc_spacy.sents:
-            if self.is_visualize:
-                self.draw_tree(sent, ifile)
-            results_sent = ""
-            if not self.is_no_query:
-                for result_sent in self.match_verb_prep(self.patterns, sent):
-                    if result_sent.strip():
-                        results_sent += result_sent + "\n"
-                results_sent = results_sent.strip()
-                if self.print_what == "matched" and results_sent:
-                    print(sent.text + "\n" + results_sent)
-                    # matched_doc.append(sent.text + "\n" + results_sent)
-                elif self.print_what == "unmatched" and not results_sent:
-                    print(sent.text)
-                    # unmatched_doc.append(sent.text)
-        # if self.print_what == "matched":
-        # print("\n\n".join(matched_doc))
-        # else:
-        # print("\n".join(unmatched_doc))
+        ofile_handler = open(ofile, 'w', encoding='utf-8')
+        try:
+            for sent in doc_spacy.sents:
+                if self.is_visualize:
+                    self.draw_tree(sent, ifile)
+                results_sent = ""
+                if not self.is_no_query:
+                    for result_sent in self.match_verb_prep(self.patterns, sent):
+                        if result_sent.strip():
+                            results_sent += result_sent + "\n"
+                    results_sent = results_sent.strip()
+                    if self.print_what == "matched" and results_sent:
+                        #print(sent.text + "\n" + results_sent)
+                        ofile_handler.write(sent.text + "\n" + results_sent + "\n")
+                    elif self.print_what == "unmatched" and not results_sent:
+                        ofile_handler.write(sent.text + "\n")
+                        #print(sent.text)
+        except KeyboardInterrupt:
+            ofile_handler.close()
+            if os.path.exists(ofile):
+                os.remove(ofile)
+            sys.exit(1)
+        ofile_handler.close()
         return True, None
 
     def run_on_ifile(self, ifile: str) -> PREVProcedureResult:
+        ofile = ifile.replace(".tokenized", "").replace(".txt", "") + "." + self.print_what
+        if not self.is_refresh and os.path.exists(ofile):
+            print(f"{ofile} already exists, skipped.")
+            return True, None
         with open(ifile, "r", encoding="utf-8") as f:
             text = f.read()
-        return self.run_on_text(text, ifile)
+        return self.run_on_text(text, ifile, ofile)
 
     def run_on_ifiles(self, ifiles: List[str]) -> PREVProcedureResult:
         i = 1

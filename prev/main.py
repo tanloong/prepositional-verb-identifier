@@ -35,8 +35,7 @@ class PREVUI:
             "--input-file",
             dest="input_file",
             default=None,
-            help=("Specify a file containing a list of input filenames"
-            ),
+            help="Specify a file containing a list of input filenames",
         )
         args_parser.add_argument(
             "--pretokenized",
@@ -96,7 +95,7 @@ class PREVUI:
         if options.input_file is not None:
             if not os.path.exists(options.input_file):
                 return False, f"No such file as \n\n{options.input_file}"
-            with open(options.input_file, 'r', encoding='utf-8') as f:
+            with open(options.input_file, "r", encoding="utf-8") as f:
                 ifile_list += [ifile.strip() for ifile in f.readlines() if ifile.strip()]
         self.verified_ifile_list = None
         if options.text is None:
