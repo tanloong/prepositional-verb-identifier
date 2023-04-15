@@ -187,29 +187,6 @@ class PREV:
                     },
                 ]
             )
-            # patterns.append(
-            #    [
-            #        {
-            #            "RIGHT_ID": "verb",
-            #            "RIGHT_ATTRS": {"TAG": {"REGEX":"^VB[^N]?$"}},
-            #        },
-            #        {
-            #            "LEFT_ID": "verb",
-            #            "REL_OP": ">+",
-            #            "RIGHT_ID": "adjectival_complement",
-            #            "RIGHT_ATTRS": {"DEP": "acomp"},
-            #        },
-            #        {
-            #            "LEFT_ID": "adjectival_complement",
-            #            "REL_OP": ">+",
-            #            "RIGHT_ID": "prep",
-            #            "RIGHT_ATTRS": {"ORTH": prep, "DEP": "prep"},
-            #        },
-            #    ]
-            # )
-            # He felt good about the show. (Hunston et al., 1996: 193)
-            # Obviously one should feel depressed about being 60. (Hunston et al., 1996: 193)
-            # NOTE: This should be excluded, it is not an instance of "verb prep noun"
             patterns.append(
                 [
                     {
