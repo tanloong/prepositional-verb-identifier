@@ -46,14 +46,21 @@ class PREV:
             "with",
         ]
         self.patterns = self.generate_patterns(preps)
-        self.nlp_stanza = stanza.Pipeline(
-            lang="en",
-            dir="/home/tan/software/stanza_resources",
-            processors="tokenize,pos",
-            tokenize_pretokenized=self.is_pretokenized,
-            download_method=None,  # type:ignore
-        )
-        self.nlp_spacy = spacy.load("en_core_web_sm")
+        self.is_stanza_initialized = False
+        self.is_spacy_initialized = False
+
+    def ensure_stanza_initialized(self):
+        if not self.is_stanza_initialized:
+            self.nlp_stanza = stanza.Pipeline(
+                lang="en",
+                dir="/home/tan/software/stanza_resources",
+                processors="tokenize,pos",
+                tokenize_pretokenized=self.is_pretokenized,
+                download_method=None,  # type:ignore
+            )
+    def ensure_spacy_initialized(self):
+        if not self.is_spacy_initialized:
+            self.nlp_spacy = spacy.load("en_core_web_sm")
 
     def build_doc_stanza(self, text: str, ifile: str):
         json_file = ifile.replace(".tokenized", "").replace(".txt", "") + "_pos-parsed.json"
@@ -63,6 +70,7 @@ class PREV:
                 doc_stanza = Doc_stanza(json.load(f))
         else:
             print(f"POS tagging {ifile}...")
+            self.ensure_stanza_initialized()
             doc_stanza = self.nlp_stanza(text)
             with open(json_file, "w") as f:
                 f.write(json.dumps(doc_stanza.to_dict())) # type:ignore
@@ -72,6 +80,7 @@ class PREV:
     def build_doc_spacy(self, text: str, ifile: str):
         """assign POS tags by doc_stanza to doc_spacy"""
         json_file = ifile.replace(".tokenized", "").replace(".txt", "") + "_dep-parsed.json"
+        self.ensure_spacy_initialized()
         if not self.is_refresh and os.path.exists(json_file):
             print(f"{json_file} already exists. Dependency parsing skipped.")
             with open(json_file, "r") as f:
