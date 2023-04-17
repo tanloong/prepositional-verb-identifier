@@ -246,19 +246,7 @@ class PREV:
                 right_id = pattern[i]["RIGHT_ID"]
                 node = sent_spacy[token_ids[i]]
                 result_sent += f"{right_id}: {node.text}_{node.lemma_}, "
-            result_sent += '\n'
-
-            # add coordinated verb
-            verb_id = token_ids[0]
-            verb_node = sent_spacy[verb_id]
-            if verb_node.head.pos_ == "VERB" and verb_node.dep_ == 'conj':
-                result_sent += f"verb: {verb_node.head.text}_{verb_node.head.lemma_}, "
-                for i in range(1, len(token_ids)):
-                    right_id = pattern[i]["RIGHT_ID"]
-                    node = sent_spacy[token_ids[i]]
-                    result_sent += f"{right_id}: {node.text}_{node.lemma_}, "
-            result_sent += '\n'
-
+            result_sent += "\n"
         return result_sent.strip()
 
     def run_on_text(self, text: str, ifile="cmdline_text", ofile=None) -> PREVProcedureResult:
