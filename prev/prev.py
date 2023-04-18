@@ -41,6 +41,7 @@ class PREV:
         if not self.is_stanza_initialized:
             logging.info("Initializing Stanza...")
             import stanza
+
             self.nlp_stanza = stanza.Pipeline(
                 lang="en",
                 dir="/home/tan/software/stanza_resources",
@@ -55,7 +56,10 @@ class PREV:
         if not self.is_spacy_initialized:
             logging.info("Initializing spaCy...")
             import spacy
-            self.nlp_spacy = spacy.load("en_core_web_sm", exclude=["ner", "attribute_ruler", "tagger"])
+
+            self.nlp_spacy = spacy.load(
+                "en_core_web_sm", exclude=["ner", "attribute_ruler", "tagger"]
+            )
             self.is_spacy_initialized = True
 
     def build_doc_stanza(self, text: str, ifile: str):
@@ -89,7 +93,10 @@ class PREV:
             words=[word.text for word in words_stanza],
             pos=[word.pos for word in words_stanza],
             tags=[word.xpos for word in words_stanza],
-            spaces=[w.end_char!=n.start_char for w,n in zip(words_stanza[:-1], words_stanza[1:])]+[False],
+            spaces=[
+                w.end_char != n.start_char for w, n in zip(words_stanza[:-1], words_stanza[1:])
+            ]
+            + [False],
             sent_starts=is_sent_start,  # type:ignore
         )
         return doc_spacy
@@ -130,13 +137,13 @@ class PREV:
             with open(svg_file, "w", encoding="utf-8") as f:
                 f.write(svg)
 
-    def generate_patterns(self, preps: List[str]) -> List[List[dict]]:# {{{
+    def generate_patterns(self, preps: List[str]) -> List[List[dict]]:  # {{{
         patterns = []
         patterns.append(
             [
                 {
                     "RIGHT_ID": "verb",
-                    "RIGHT_ATTRS": {"TAG": {"REGEX": "^VB[^N]?$"}},
+                    "RIGHT_ATTRS": {"TAG": {"REGEX": "^VB"}},
                 },
                 {
                     "LEFT_ID": "verb",
@@ -162,7 +169,7 @@ class PREV:
             [
                 {
                     "RIGHT_ID": "verb",
-                    "RIGHT_ATTRS": {"TAG": {"REGEX": "^VB[^N]?$"}},
+                    "RIGHT_ATTRS": {"TAG": {"REGEX": "^VB"}},
                 },
                 {
                     "LEFT_ID": "verb",
@@ -184,7 +191,7 @@ class PREV:
             [
                 {
                     "RIGHT_ID": "verb",
-                    "RIGHT_ATTRS": {"TAG": {"REGEX": "^VB[^N]?$"}},
+                    "RIGHT_ATTRS": {"TAG": {"REGEX": "^VB"}},
                 },
                 {
                     "LEFT_ID": "verb",
@@ -200,7 +207,7 @@ class PREV:
             [
                 {
                     "RIGHT_ID": "verb",
-                    "RIGHT_ATTRS": {"TAG": {"REGEX": "^VB[^N]?$"}},
+                    "RIGHT_ATTRS": {"TAG": {"REGEX": "^VB"}},
                 },
                 {
                     "LEFT_ID": "verb",
@@ -224,7 +231,31 @@ class PREV:
         # All the women will be dying for you to make a mistake. (Francis et al., 1996: 239)
         # He longed for the winter to be over. (Francis et al., 1996: 239)
         # I'll arrange for it to be sent direct to the properly when it is unloaded. (Francis et al., 1996: 239)
-        return patterns# }}}
+        return patterns  # }}}
+
+    def check_passive(self, verb_id: int, sent_spacy: Span) -> bool:
+        is_passive = False
+        for child in sent_spacy[verb_id].lefts:
+            if child.dep_ == "auxpass":
+                is_passive = True
+                break
+        return is_passive
+
+    def parse_matches(self, matches: List[tuple], pattern: List[dict], sent_spacy: Span) -> str:
+        result_sent = ""
+        # matches: [(<match_id>, [<token_id1>, <token_id2>, <token_id3>, <token_id4>])]
+        # each token_id corresponds to one pattern dict
+        for match in matches:
+            _, token_ids = match
+            verb_id = token_ids[0]
+            if self.check_passive(verb_id, sent_spacy):
+                continue
+            for i in range(len(token_ids)):
+                right_id = pattern[i]["RIGHT_ID"]
+                node = sent_spacy[token_ids[i]]
+                result_sent += f"{right_id}: {node.text}_{node.lemma_}, "
+            result_sent += "\n"
+        return result_sent.strip()
 
     def match_prev(self, patterns: List[List[dict]], sent_spacy: Span):
         matcher = DependencyMatcher(sent_spacy.vocab)
@@ -235,19 +266,6 @@ class PREV:
             matcher.add(match_id, [pattern])
             matches = matcher(sent_spacy)
             yield self.parse_matches(matches, pattern, sent_spacy)
-
-    def parse_matches(self, matches: List[tuple], pattern: List[dict], sent_spacy: Span) -> str:
-        result_sent = ""
-        # matches: [(<match_id>, [<token_id1>, <token_id2>, <token_id3>, <token_id4>])]
-        # each token_id corresponds to one pattern dict
-        for match in matches:
-            _, token_ids = match
-            for i in range(len(token_ids)):
-                right_id = pattern[i]["RIGHT_ID"]
-                node = sent_spacy[token_ids[i]]
-                result_sent += f"{right_id}: {node.text}_{node.lemma_}, "
-            result_sent += "\n"
-        return result_sent.strip()
 
     def run_on_text(self, text: str, ifile="cmdline_text", ofile=None) -> PREVProcedureResult:
         if ofile is None:
