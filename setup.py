@@ -21,7 +21,7 @@ setuptools.setup(
     description="Prepositional Verb Identifier",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    install_requires=['spacy', 'stanza'],
+    install_requires=['spacy>=3.5.1', 'stanza'],
     classifiers=[
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.8",

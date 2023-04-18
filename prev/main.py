@@ -17,6 +17,7 @@
 
 import argparse
 import glob
+import logging
 import os
 import sys
 from typing import List
@@ -59,7 +60,7 @@ class PREVUI:
             dest="is_refresh",
             action="store_true",
             default=False,
-            help="Ignore existing svg files and intermediate annotated files (*.pkl).",
+            help="Ignore existing svg files and intermediate annotated files (*.json).",
         )
         args_parser.add_argument(
             "--no-query",
@@ -88,10 +89,21 @@ class PREVUI:
                 ' option is set to "matched".'
             ),
         )
+        args_parser.add_argument(
+            "--quiet",
+            dest="is_quiet",
+            action="store_true",
+            default=False,
+            help="Suppress regular logging messages",
+        )
         return args_parser
 
     def parse_args(self, argv: List[str]) -> PREVProcedureResult:
         options, ifile_list = self.args_parser.parse_known_args(argv[1:])
+        if options.is_quiet:
+            logging.basicConfig(format="%(message)s", level=logging.CRITICAL)
+        else:
+            logging.basicConfig(format="%(message)s", level=logging.INFO)
         if options.input_file is not None:
             if not os.path.exists(options.input_file):
                 return False, f"No such file as \n\n{options.input_file}"
@@ -177,9 +189,9 @@ def main() -> None:
     ui = PREVUI()
     success, err_msg = ui.parse_args(sys.argv)
     if not success:
-        print(err_msg)
+        logging.critical(err_msg)
         sys.exit(1)
     success, err_msg = ui.run()
     if not success:
-        print(err_msg)
+        logging.critical(err_msg)
         sys.exit(1)
