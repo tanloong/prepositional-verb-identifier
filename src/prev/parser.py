@@ -81,6 +81,7 @@ class DependencyParser:
 
     def _parse(self, text: str, ifile_prefix: str):
         ofile_depparsed = ifile_prefix + "_dep-parsed.json"
+        self.ensure_spacy_initialized()
         if os.path.exists(ofile_depparsed) and not self.is_refresh:
             logging.info(f"{ofile_depparsed} already exists. Dependency parsing skipped.")
             with open(ofile_depparsed, "r") as f:
@@ -88,7 +89,6 @@ class DependencyParser:
         else:
             doc_stanza = self.postag(text, ifile_prefix)  # type:ignore
             doc_spacy = self.stanza2spacy(doc_stanza)
-            self.ensure_spacy_initialized()
             logging.info(f"Dependency parsing...")
             doc_spacy = self.nlp_spacy(doc_spacy)
             logging.info(f"Saving parse trees in {ofile_depparsed}.")
@@ -97,12 +97,10 @@ class DependencyParser:
         return doc_spacy
 
     def parse(self, text: Optional[str] = None, ifile: Optional[str] = None):
-        assert any((text, ifile)) and not all(
-            (text, ifile)
-        ), "One and only one of (text, ifile) can be specified."
+        assert any((text, ifile)), "Neither text nor ifile is valid."
         if ifile is None:
             ifile = "cmdline_text"
-        else:
+        elif text is None:
             with open(ifile, "r", encoding="utf-8") as f:
                 text = f.read()
         logging.info(f"Processing {ifile}...")

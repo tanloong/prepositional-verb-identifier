@@ -128,8 +128,8 @@ class PREVUI:
                     return (False, f"No such file as \n\n{f}")
             if verified_ifile_list:
                 self.verified_ifile_list = verified_ifile_list
-        else:
-            options.is_refresh = True
+        # else:
+        #     options.is_refresh = True
         self.init_kwargs = {
             "is_pretokenized": options.is_pretokenized,
             "is_refresh": options.is_refresh,
