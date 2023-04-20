@@ -22,7 +22,6 @@ class DependencyParser:
 
             self.nlp_stanza = stanza.Pipeline(
                 lang="en",
-                dir="/home/tan/software/stanza_resources",
                 processors="tokenize,pos",
                 use_gpu=False,
                 tokenize_pretokenized=self.is_pretokenized,
