@@ -93,10 +93,7 @@ class PREV:
             words=[word.text for word in words_stanza],
             pos=[word.pos for word in words_stanza],
             tags=[word.xpos for word in words_stanza],
-            spaces=[
-                w.end_char != n.start_char for w, n in zip(words_stanza[:-1], words_stanza[1:])
-            ]
-            + [False],
+            spaces=[w.end_char != n.start_char for w, n in zip(words_stanza[:-1], words_stanza[1:])] + [False],
             sent_starts=is_sent_start,  # type:ignore
         )
         return doc_spacy

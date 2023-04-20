@@ -1,4 +1,13 @@
 import setuptools
+from setuptools.command.install import install as install_
+
+class InstallCommand(install_):
+    def run(self):
+        import stanza
+        import spacy
+        stanza.download("en", resources_url="stanfordnlp", processors="tokenize,pos")
+        spacy.cli.download("en_core_web_sm", exclude=["tagger", "attribute_ruler", "ner"])
+        install_.run(self)
 
 with open("./README.md", "r", encoding="utf-8") as f:
     long_description = f.read()
@@ -13,13 +22,12 @@ setuptools.setup(
     url="https://github.com/tanloong/prepositional-verb-identifier",
     packages=setuptools.find_packages("src"),
     package_dir={"": "src"},
+    cmdclass={"install":InstallCommand},
     description="Prepositional Verb Identifier",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    install_requires=['spacy>=3.5.1', 'stanza'],
+    install_requires=['stanza', 'spacy>=3.5.1'],
     classifiers=[
-        "Programming Language :: Python :: 3.11",
-        "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.7",
