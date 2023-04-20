@@ -22,6 +22,7 @@ import os
 import sys
 from typing import List
 
+from .about import __version__
 from .util import PREVProcedureResult
 
 
@@ -32,6 +33,12 @@ class PREVUI:
 
     def create_args_parser(self) -> argparse.ArgumentParser:
         args_parser = argparse.ArgumentParser(prog="prev")
+        args_parser.add_argument(
+            "--version",
+            action="store_true",
+            default=False,
+            help="Show version and exit.",
+        )
         args_parser.add_argument(
             "--input-file",
             dest="input_file",
@@ -176,13 +183,19 @@ class PREVUI:
         return extractor.run_on_ifiles(self.verified_ifile_list)  # type:ignore
 
     def run(self) -> PREVProcedureResult:
-        if self.options.text is not None:
+        if self.options.version:
+            return self.show_version()
+        elif self.options.text is not None:
             return self.run_on_text()
         elif self.verified_ifile_list is not None:
             return self.run_on_ifiles()
         else:
             self.args_parser.print_help()
             return True, None
+
+    def show_version(self) -> PREVProcedureResult:
+        print(__version__)
+        return True, None
 
 
 def main() -> None:

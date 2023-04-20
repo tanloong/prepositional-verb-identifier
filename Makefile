@@ -5,13 +5,14 @@ refresh: lint clean build install
 clean:
 	rm -rf __pycache__
 	rm -rf tests/__pycache__
+	rm -rf src/prev/__pycache__
 	rm -rf build/
 	rm -rf dist/
-	rm -rf *.egg-info/
+	rm -rf src/prev.egg-info
 	rm -rf htmlcov
 	rm -rf coverage.xml
 	rm -f *.json
-	rm -rf *_trees/
+	rm -rf *_trees
 	rm -f *.matched
 
 build:
@@ -27,6 +28,6 @@ test:
 	python -m unittest
 
 lint:
-	black prev/ tests/ --line-length 97 --preview
-	flake8 prev/ tests/ --count --statistics --ignore=E501,W503
+	black src/prev/ tests/ --line-length 97 --preview
+	flake8 src/prev/ tests/ --count --statistics --ignore=E501,W503
 	# mypy --check-untyped-defs prev/
