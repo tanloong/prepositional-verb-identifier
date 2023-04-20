@@ -3,10 +3,12 @@ from setuptools.command.install import install as install_
 
 class InstallCommand(install_):
     def run(self):
+        import subprocess
+        subprocess.call(["python", "-m", "pip", "install", "stanza", "spacy>=3.5.1"])
         import stanza
         import spacy
-        stanza.download("en", resources_url="stanfordnlp", processors="tokenize,pos")
-        spacy.cli.download("en_core_web_sm", exclude=["tagger", "attribute_ruler", "ner"])
+        stanza.download("en", resources_url="stanfordnlp")
+        spacy.cli.download("en_core_web_sm")
         install_.run(self)
 
 with open("./README.md", "r", encoding="utf-8") as f:
