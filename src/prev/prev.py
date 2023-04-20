@@ -1,17 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding=utf-8 -*-
-import json
 import logging
 import os
-import sys
 from typing import List
 
 from spacy import displacy
-from spacy.matcher import DependencyMatcher
-from spacy.tokens import Doc as Doc_spacy
 from spacy.tokens.span import Span
-from stanza.models.common.doc import Document as Doc_stanza
 
+from .parser import DependencyParser
+from .querier import Querier
 from .util import PREVProcedureResult
 
 
@@ -30,91 +27,13 @@ class PREV:
         self.is_visualize = is_visualize
         self.print_what = print_what
 
+        self.depparser = DependencyParser(self.is_pretokenized, self.is_refresh)
+        self.querier = Querier()
+
         # fmt: off
         preps = ["about", "across", "against", "as", "for", "into", "of", "over", "through", "under", "with"]
         # fmt: on
         self.patterns = self.generate_patterns(preps)
-        self.is_stanza_initialized = False
-        self.is_spacy_initialized = False
-
-    def ensure_stanza_initialized(self):
-        if not self.is_stanza_initialized:
-            logging.info("Initializing Stanza...")
-            import stanza
-
-            self.nlp_stanza = stanza.Pipeline(
-                lang="en",
-                dir="/home/tan/software/stanza_resources",
-                processors="tokenize,pos",
-                use_gpu=False,
-                tokenize_pretokenized=self.is_pretokenized,
-                download_method=None,  # type:ignore
-            )
-            self.is_stanza_initialized = True
-
-    def ensure_spacy_initialized(self):
-        if not self.is_spacy_initialized:
-            logging.info("Initializing spaCy...")
-            import spacy
-
-            self.nlp_spacy = spacy.load(
-                "en_core_web_sm", exclude=["ner", "attribute_ruler", "tagger"]
-            )
-            self.is_spacy_initialized = True
-
-    def build_doc_stanza(self, text: str, ifile: str):
-        json_file = ifile.replace(".tokenized", "").replace(".txt", "") + "_pos-parsed.json"
-        if os.path.exists(json_file) and not self.is_refresh:
-            logging.info(f"{json_file} already exists. POS tagging skipped.")
-            with open(json_file, "r") as f:
-                doc_stanza = Doc_stanza(json.load(f))
-        else:
-            self.ensure_stanza_initialized()
-            logging.info(f"POS tagging {ifile}...")
-            doc_stanza = self.nlp_stanza(text)
-            logging.info(f"Saving POS tagged file in {json_file}.")
-            with open(json_file, "w") as f:
-                f.write(json.dumps(doc_stanza.to_dict()))  # type:ignore
-        return doc_stanza
-
-    def stanza2spacy(self, doc_stanza):
-        logging.info("Converting doc_stanza to doc_spacy...")
-        words_stanza = list(doc_stanza.iter_words())  # type:ignore
-        sent_start_ids = []
-        current_id = 0
-        for sentence in doc_stanza.sentences:  # type:ignore
-            sent_start_ids.append(current_id)
-            current_id += len(sentence.words)
-        is_sent_start = [False for _ in words_stanza]
-        for sent_start_id in sent_start_ids:
-            is_sent_start[sent_start_id] = True
-        doc_spacy = Doc_spacy(
-            self.nlp_spacy.vocab,
-            words=[word.text for word in words_stanza],
-            pos=[word.pos for word in words_stanza],
-            tags=[word.xpos for word in words_stanza],
-            spaces=[w.end_char != n.start_char for w, n in zip(words_stanza[:-1], words_stanza[1:])] + [False],
-            sent_starts=is_sent_start,  # type:ignore
-        )
-        return doc_spacy
-
-    def build_doc_spacy(self, text: str, ifile: str):
-        """assign POS tags by doc_stanza to doc_spacy"""
-        json_file = ifile.replace(".tokenized", "").replace(".txt", "") + "_dep-parsed.json"
-        self.ensure_spacy_initialized()
-        if os.path.exists(json_file) and not self.is_refresh:
-            logging.info(f"{json_file} already exists. Dependency parsing skipped.")
-            with open(json_file, "r") as f:
-                doc_spacy = Doc_spacy(self.nlp_spacy.vocab).from_json(json.load(f))
-        else:
-            doc_stanza = self.build_doc_stanza(text, ifile)
-            doc_spacy = self.stanza2spacy(doc_stanza)
-            logging.info(f"Dependency parsing {ifile}...")
-            doc_spacy = self.nlp_spacy(doc_spacy)
-            logging.info(f"Saving parse trees in {json_file}.")
-            with open(json_file, "w") as f:
-                f.write(json.dumps(doc_spacy.to_json()))
-        return doc_spacy
 
     def draw_tree(self, sent_spacy: Span, ifile: str) -> None:
         trees_dir = ifile.replace(".tokenized", "").replace(".txt", "") + "_trees"
@@ -230,44 +149,10 @@ class PREV:
         # I'll arrange for it to be sent direct to the properly when it is unloaded. (Francis et al., 1996: 239)
         return patterns  # }}}
 
-    def check_passive(self, verb_id: int, sent_spacy: Span) -> bool:
-        is_passive = False
-        for child in sent_spacy[verb_id].lefts:
-            if child.dep_ == "auxpass":
-                is_passive = True
-                break
-        return is_passive
-
-    def parse_matches(self, matches: List[tuple], pattern: List[dict], sent_spacy: Span) -> str:
-        result_sent = ""
-        # matches: [(<match_id>, [<token_id1>, <token_id2>, <token_id3>, <token_id4>])]
-        # each token_id corresponds to one pattern dict
-        for match in matches:
-            _, token_ids = match
-            verb_id = token_ids[0]
-            if self.check_passive(verb_id, sent_spacy):
-                continue
-            for i in range(len(token_ids)):
-                right_id = pattern[i]["RIGHT_ID"]
-                node = sent_spacy[token_ids[i]]
-                result_sent += f"{right_id}: {node.text}_{node.lemma_}, "
-            result_sent += "\n"
-        return result_sent.strip()
-
-    def match_prev(self, patterns: List[List[dict]], sent_spacy: Span):
-        matcher = DependencyMatcher(sent_spacy.vocab)
-        match_id = "preps"
-        for pattern in patterns:
-            if matcher.get(match_id) is not None:
-                matcher.remove(match_id)
-            matcher.add(match_id, [pattern])
-            matches = matcher(sent_spacy)
-            yield self.parse_matches(matches, pattern, sent_spacy)
-
     def run_on_text(self, text: str, ifile="cmdline_text", ofile=None) -> PREVProcedureResult:
         if ofile is None:
             ofile = f"cmdline_text.{self.print_what}"
-        doc_spacy = self.build_doc_spacy(text, ifile)
+        doc_spacy = self.depparser.parse(text, ifile)
         if self.is_visualize:
             for sent in doc_spacy.sents:
                 self.draw_tree(sent, ifile)
@@ -276,7 +161,7 @@ class PREV:
             try:
                 for sent in doc_spacy.sents:
                     results = ""
-                    for result in self.match_prev(self.patterns, sent):
+                    for result in self.querier.match(self.patterns, sent):
                         if result:
                             results += result + "\n"
                     results = results.strip()
@@ -288,7 +173,7 @@ class PREV:
                 ofile_handler.close()
                 if os.path.exists(ofile):
                     os.remove(ofile)
-                sys.exit(1)
+                return False, "KeyboardInterrupt"
             ofile_handler.close()
         return True, None
 
