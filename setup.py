@@ -38,6 +38,6 @@ setuptools.setup(
         "Operating System :: POSIX :: Linux",
         "Operating System :: Microsoft :: Windows",
     ],
-    python_requires=">=3.6,<=3.9",
+    python_requires=">=3.6",
     entry_points={"console_scripts": ["prev = prev:main"]},
 )
