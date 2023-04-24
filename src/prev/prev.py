@@ -53,7 +53,7 @@ class PREV:
     def run_on_text(self, text: str, ifile="cmdline_text", ofile=None) -> PREVProcedureResult:
         if ofile is None:
             ofile = f"cmdline_text.{self.print_what}"
-        doc_spacy = self.depparser.parse(text, ifile)
+        doc_spacy = self.depparser.depparse(text, ifile)
         if self.is_visualize:
             for sent in doc_spacy.sents:
                 self.draw_tree(sent, ifile)

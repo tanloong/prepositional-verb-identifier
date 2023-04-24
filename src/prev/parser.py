@@ -15,29 +15,39 @@ class DependencyParser:
         self.is_stanza_initialized = False
         self.is_spacy_initialized = False
 
-    def ensure_stanza_initialized(self):
-        if not self.is_stanza_initialized:
-            logging.info("Initializing Stanza...")
-            import stanza
+    def ensure_stanza_initialized(func):
+        def wrapper(self, *args, **kwargs):
+            if not self.is_stanza_initialized:
+                logging.info("Initializing Stanza...")
+                import stanza
 
-            self.nlp_stanza = stanza.Pipeline(
-                lang="en",
-                processors="tokenize,pos",
-                use_gpu=False,
-                tokenize_pretokenized=self.is_pretokenized,
-                download_method=None,  # type:ignore
-            )
-            self.is_stanza_initialized = True
+                self.nlp_stanza = stanza.Pipeline(
+                    lang="en",
+                    processors="tokenize,pos",
+                    use_gpu=False,
+                    tokenize_pretokenized=self.is_pretokenized,
+                    download_method=None,  # type:ignore
+                )
+                self.is_stanza_initialized = True
+            return func(self, *args, **kwargs) #type:ignore
+        return wrapper
 
-    def ensure_spacy_initialized(self):
-        if not self.is_spacy_initialized:
-            logging.info("Initializing spaCy...")
-            import spacy
+    def ensure_spacy_initialized(func):
+        def wrapper(self, *args, **kwargs):
+            if not self.is_spacy_initialized:
+                logging.info("Initializing spaCy...")
+                import spacy
 
-            self.nlp_spacy = spacy.load(
-                "en_core_web_sm", exclude=["ner", "attribute_ruler", "tagger"]
-            )
-            self.is_spacy_initialized = True
+                self.nlp_spacy = spacy.load(
+                    "en_core_web_sm", exclude=["ner", "attribute_ruler", "tagger"]
+                )
+                self.is_spacy_initialized = True
+            return func(self, *args, **kwargs) #type:ignore
+        return wrapper
+
+    @ensure_stanza_initialized #type:ignore
+    def _postag(self, text:str):
+        return self.nlp_stanza(text) #type:ignore
 
     def postag(self, text: str, ifile_prefix: str):
         ofile_postagged = ifile_prefix + "_pos-tagged.json"
@@ -47,8 +57,7 @@ class DependencyParser:
                 doc_stanza = Doc_stanza(json.load(f))
         else:
             logging.info(f"POS tagging...")
-            self.ensure_stanza_initialized()
-            doc_stanza = self.nlp_stanza(text)
+            doc_stanza = self._postag(text)
             logging.info(f"Saving POS tagged file in {ofile_postagged}.")
             with open(ofile_postagged, "w") as f:
                 f.write(json.dumps(doc_stanza.to_dict()))  # type:ignore
@@ -66,7 +75,7 @@ class DependencyParser:
         for sent_start_id in sent_start_ids:
             is_sent_start[sent_start_id] = True
         doc_spacy = Doc_spacy(
-            self.nlp_spacy.vocab,
+            self.nlp_spacy.vocab, #type:ignore
             words=[word.text for word in words_stanza],
             pos=[word.pos for word in words_stanza],
             tags=[word.xpos for word in words_stanza],
@@ -78,24 +87,24 @@ class DependencyParser:
         )
         return doc_spacy
 
-    def _parse(self, text: str, ifile_prefix: str):
+    @ensure_spacy_initialized #type:ignore
+    def _depparse(self, text: str, ifile_prefix: str):
         ofile_depparsed = ifile_prefix + "_dep-parsed.json"
-        self.ensure_spacy_initialized()
         if os.path.exists(ofile_depparsed) and not self.is_refresh:
             logging.info(f"{ofile_depparsed} already exists. Dependency parsing skipped.")
             with open(ofile_depparsed, "r") as f:
-                doc_spacy = Doc_spacy(self.nlp_spacy.vocab).from_json(json.load(f))
+                doc_spacy = Doc_spacy(self.nlp_spacy.vocab).from_json(json.load(f)) #type:ignore
         else:
             doc_stanza = self.postag(text, ifile_prefix)  # type:ignore
             doc_spacy = self.stanza2spacy(doc_stanza)
             logging.info(f"Dependency parsing...")
-            doc_spacy = self.nlp_spacy(doc_spacy)
+            doc_spacy = self.nlp_spacy(doc_spacy) #type:ignore
             logging.info(f"Saving parse trees in {ofile_depparsed}.")
             with open(ofile_depparsed, "w") as f:
                 f.write(json.dumps(doc_spacy.to_json()))
         return doc_spacy
 
-    def parse(self, text: Optional[str] = None, ifile: Optional[str] = None):
+    def depparse(self, text: Optional[str] = None, ifile: Optional[str] = None):
         assert any((text, ifile)), "Neither text nor ifile is valid."
         if ifile is None:
             ifile = "cmdline_text"
@@ -104,5 +113,5 @@ class DependencyParser:
                 text = f.read()
         logging.info(f"Processing {ifile}...")
         ifile_prefix = ifile.split(".")[0]
-        doc_spacy = self._parse(text, ifile_prefix)  # type:ignore
+        doc_spacy = self._depparse(text, ifile_prefix)  # type:ignore
         return doc_spacy
