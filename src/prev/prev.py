@@ -20,6 +20,7 @@ class PREV:
         is_no_query: bool,
         is_visualize: bool,
         print_what: str,
+        n_matching_process: int = 3,
     ) -> None:
         self.is_pretokenized = is_pretokenized
         self.is_refresh = is_refresh
@@ -28,8 +29,7 @@ class PREV:
         self.print_what = print_what
 
         self.depparser = DependencyParser(self.is_pretokenized, self.is_refresh)
-        self.querier = Querier()
-
+        self.querier = Querier(n_matching_process)
 
     def draw_tree(self, sent_spacy: Span, ifile: str) -> None:
         trees_dir = ifile.replace(".tokenized", "").replace(".txt", "") + "_trees"
@@ -48,7 +48,6 @@ class PREV:
                 os.makedirs(trees_dir)
             with open(svg_file, "w", encoding="utf-8") as f:
                 f.write(svg)
-
 
     def run_on_text(self, text: str, ifile="cmdline_text", ofile=None) -> PREVProcedureResult:
         if ofile is None:

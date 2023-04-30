@@ -103,6 +103,13 @@ class PREVUI:
             default=False,
             help="Suppress regular logging messages",
         )
+        args_parser.add_argument(
+            "--matching-process",
+            dest="n_matching_process",
+            default=3,
+            type=int,
+            help="Specify the number of parallel processes for the matching procedure.",
+        )
         return args_parser
 
     def parse_args(self, argv: List[str]) -> PREVProcedureResult:
@@ -136,6 +143,7 @@ class PREVUI:
             "is_no_query": options.is_no_query,
             "is_visualize": options.is_visualize,
             "print_what": options.print_what,
+            "n_matching_process": options.n_matching_process,
         }
         self.options = options
         return True, None

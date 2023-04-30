@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding=utf-8 -*-
+import logging
 from typing import List
-from spacy.tokens.span import Span
-from spacy.tokens import Doc as Doc_spacy
+from multiprocessing import Pool
+
 from spacy.matcher import DependencyMatcher
+from spacy.tokens import Doc as Doc_spacy
+from spacy.tokens.span import Span
 
 
 class Querier:
-    def __init__(self):
+    def __init__(self, n_matching_process:int=3):
+        self.n_matching_process = n_matching_process
         # fmt: off
         preps = ["about", "across", "against", "as", "for", "into", "of", "over", "through", "under", "with"]
         # fmt: on
@@ -16,7 +20,7 @@ class Querier:
     # {{{
     def generate_patterns(self, preps: List[str]) -> List[List[dict]]:
         patterns = [
-            [
+            [  # {{{
                 # 1. POS=ADP and DEP=prt,
                 #    e.g., His face lit up with pleasure. (Francis et al., 1996: 347)
                 # 2. POS=ADV and DEP=advmod,
@@ -44,8 +48,8 @@ class Querier:
                     "RIGHT_ID": "prep",
                     "RIGHT_ATTRS": {"ORTH": {"IN": preps}, "DEP": "prep"},
                 },
-            ],
-            [
+            ],  # }}}
+            [  # {{{
                 {
                     "RIGHT_ID": "verb",
                     "RIGHT_ATTRS": {"TAG": {"REGEX": "^VB"}},
@@ -64,8 +68,8 @@ class Querier:
                     "RIGHT_ID": "prep",
                     "RIGHT_ATTRS": {"ORTH": {"IN": preps}, "DEP": "prep"},
                 },
-            ],
-            [
+            ],  # }}}
+            [  # {{{
                 {
                     "RIGHT_ID": "verb",
                     "RIGHT_ATTRS": {"TAG": {"REGEX": "^VB"}},
@@ -77,8 +81,8 @@ class Querier:
                     "RIGHT_ID": "prep",
                     "RIGHT_ATTRS": {"ORTH": {"IN": preps}, "DEP": "prep"},
                 },
-            ],
-            [
+            ],  # }}}
+            [  # {{{
                 # 1. I rummaged in my suitcase for a tie. (Francis et al., 1996: 234)
                 {
                     "RIGHT_ID": "verb",
@@ -97,8 +101,8 @@ class Querier:
                     "RIGHT_ID": "prep",
                     "RIGHT_ATTRS": {"ORTH": {"IN": preps}, "DEP": "prep"},
                 },
-            ],
-            [
+            ],  # }}}
+            [  # {{{
                 # 1. Jones and his accomplice posed as police officers to gain entry to
                 #    the house. (Francis et al., 1996: 208)
                 # 2. She got up from her desk and motioned for Wade to follow her.
@@ -130,7 +134,7 @@ class Querier:
                     "RIGHT_ID": "infinitive-to",
                     "RIGHT_ATTRS": {"ORTH": "to"},
                 },
-            ],
+            ],  # }}}
         ]
         return patterns
 
@@ -166,32 +170,37 @@ class Querier:
             result += "\n"
         return result
 
-    def match_sent(self, sent_spacy: Span, matcher: DependencyMatcher):
+    def match_sent(self, sent_spacy: Span):
         result = ""
 
         for pattern in self.patterns:
-            if matcher.get("preps") is not None:
-                matcher.remove("preps")
-            matcher.add("preps", [pattern])
+            if self.matcher.get("preps") is not None:
+                self.matcher.remove("preps")
+            self.matcher.add("preps", [pattern])
 
-            matches = matcher(sent_spacy)
+            matches = self.matcher(sent_spacy)
             result += self.parse_matches(matches, pattern, sent_spacy)
 
-        if result:
-            result = f"{sent_spacy.text}\n{result}"
-        return result.strip()
+        result = result.strip()
+        if self.print_what == "matched" and result:
+            result = f"{sent_spacy.text}\n{result}\n\n"
+        elif self.print_what == "unmatched" and not result:
+            result = f"{sent_spacy.text}\n"
+
+        return result
 
     def match(self, doc_spacy: Doc_spacy, print_what: str):
         assert print_what in ("matched", "unmatched"), f"Unexpected print_what: {print_what}"
 
-        matcher = DependencyMatcher(doc_spacy.vocab)
-        result = ""
+        self.matcher = DependencyMatcher(doc_spacy.vocab)
+        self.print_what = print_what
 
-        for sent_spacy in doc_spacy.sents:
-            result_per_sent = self.match_sent(sent_spacy, matcher)
+        array_head = doc_spacy._get_array_attrs()
+        array = doc_spacy.to_array(array_head)
+        sents = [sent_spacy.as_doc(array_head=array_head, array=array) for sent_spacy in doc_spacy.sents]
 
-            if print_what == "matched" and result_per_sent:
-                result += result_per_sent + "\n\n"
-            elif print_what == "unmatched" and not result_per_sent:
-                result += sent_spacy.text + "\n"
+        logging.info("Matching...")
+        p = Pool(self.n_matching_process)
+        result = "".join(p.map(self.match_sent, sents))
+
         return result
