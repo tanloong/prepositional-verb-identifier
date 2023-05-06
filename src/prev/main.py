@@ -46,6 +46,18 @@ class PREVUI:
             help="Specify a file containing a list of input filenames",
         )
         args_parser.add_argument(
+            "--expand-wildcards",
+            dest="expand_wildcards",
+            action="store_true",
+            default=False,
+            help=(
+                "Print all files that match your wildcard pattern. This can help you ensure that"
+                " your pattern matches all desired files and excludes any unwanted ones. Note"
+                " that files that do not exist on the computer will not be included in the"
+                " output, even if they match the specified pattern."
+            ),
+        )
+        args_parser.add_argument(
             "--pretokenized",
             dest="is_pretokenized",
             action="store_true",
@@ -193,6 +205,8 @@ class PREVUI:
     def run(self) -> PREVProcedureResult:
         if self.options.version:
             return self.show_version()
+        elif self.options.expand_wildcards:
+            return self.expand_wildcards()
         elif self.options.text is not None:
             return self.run_on_text()
         elif self.verified_ifile_list is not None:
@@ -203,6 +217,13 @@ class PREVUI:
 
     def show_version(self) -> PREVProcedureResult:
         print(__version__)
+        return True, None
+
+    def expand_wildcards(self) -> PREVProcedureResult:
+        if self.verified_ifile_list:
+            print("Input files:")
+            for ifile in sorted(self.verified_ifile_list):
+                print(f" {ifile}")
         return True, None
 
 
