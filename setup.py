@@ -30,6 +30,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     install_requires=['stanza', 'spacy>=3.5.1'],
     classifiers=[
+        "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.7",

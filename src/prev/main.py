@@ -162,17 +162,17 @@ class PREVUI:
 
     def check_python(self) -> PREVProcedureResult:
         v_info = sys.version_info
-        if (v_info.minor >= 6 and v_info.minor <= 9) and v_info.major == 3:
+        if (v_info.minor >= 6 and v_info.minor <= 10) and v_info.major == 3:
             return True, None
         else:
             return (
                 False,
                 (
                     f"Error: Python {v_info.major}.{v_info.minor} is not supported."
-                    " PREV only supports Python 3.6 -- 3.9, because the master branch"
+                    " PREV only supports Python 3.6 -- 3.10, because the master branch"
                     " of Stanza"
                     " (https://github.com/stanfordnlp/stanza/issues/951#issuecomment-1035616707)"
-                    " only supports up to 3.9. You can install a 3.9 verion"
+                    " only supports up to 3.10. You can install a 3.10 verion"
                     " (https://www.python.org/downloads/) and run PREV in a virtual"
                     " environment with `virtualenv`"
                     " (https://virtualenv.pypa.io/en/latest/index.html)."
