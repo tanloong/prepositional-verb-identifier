@@ -200,7 +200,7 @@ class Querier:
         sents = [sent_spacy.as_doc(array_head=array_head, array=array) for sent_spacy in doc_spacy.sents]
 
         logging.info("Matching...")
-        p = Pool(self.n_matching_process)
-        result = "".join(p.map(self.match_sent, sents))
+        with Pool(self.n_matching_process) as p:
+            result = "".join(p.map(self.match_sent, sents))
 
         return result
