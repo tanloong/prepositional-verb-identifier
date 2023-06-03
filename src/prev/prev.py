@@ -2,7 +2,8 @@
 # -*- coding=utf-8 -*-
 import logging
 import os
-from typing import List
+import sys
+from typing import List, Optional
 
 from spacy import displacy
 from spacy.tokens.span import Span
@@ -19,17 +20,22 @@ class PREV:
         is_refresh: bool,
         is_no_query: bool,
         is_visualize: bool,
+        is_stdout: bool,
+        is_interactive: bool,
         print_what: str,
         n_matching_process: int = 3,
+        config_file: Optional[str] = None,
     ) -> None:
         self.is_pretokenized = is_pretokenized
         self.is_refresh = is_refresh
         self.is_no_query = is_no_query
         self.is_visualize = is_visualize
+        self.is_stdout = is_stdout
+        self.is_interactive = is_interactive
         self.print_what = print_what
 
         self.depparser = DependencyParser(self.is_pretokenized, self.is_refresh)
-        self.querier = Querier(n_matching_process)
+        self.querier = Querier(n_matching_process, config_file)
 
     def draw_tree(self, sent_spacy: Span, ifile: str) -> None:
         trees_dir = ifile.replace(".tokenized", "").replace(".txt", "") + "_trees"
@@ -50,30 +56,30 @@ class PREV:
                 f.write(svg)
 
     def run_on_text(self, text: str, ifile="cmdline_text", ofile=None) -> PREVProcedureResult:
-        if ofile is None:
-            ofile = f"cmdline_text.{self.print_what}"
         doc_spacy = self.depparser.depparse(text, ifile)
         if self.is_visualize:
             for sent in doc_spacy.sents:
                 self.draw_tree(sent, ifile)
         if not self.is_no_query:
-            ofile_handler = open(ofile, "w", encoding="utf-8")
             try:
                 result = self.querier.match(doc_spacy, self.print_what)
-                ofile_handler.write(result)
             except KeyboardInterrupt:
-                ofile_handler.close()
-                if os.path.exists(ofile):
-                    os.remove(ofile)
                 return False, "KeyboardInterrupt"
-            ofile_handler.close()
+            else:
+                if not self.is_stdout:
+                    if ofile is None:
+                        ofile = f"cmdline_text.{self.print_what}"
+                    with open(ofile, "w", encoding="utf-8") as f:
+                        f.write(result)
+                else:
+                    sys.stdout.write(result)
         return True, None
 
     def run_on_ifile(self, ifile: str) -> PREVProcedureResult:
         ofile = ifile.replace(".tokenized", "").replace(".txt", "") + "." + self.print_what
-        if not self.is_refresh and os.path.exists(ofile):
-            logging.info(f"{ofile} already exists, skipped.")
-            return True, None
+        # if not self.is_refresh and os.path.exists(ofile):
+        #     logging.info(f"{ofile} already exists, skipped.")
+        #     return True, None
         logging.info(f"Matching against {ifile}...")
         with open(ifile, "r", encoding="utf-8") as f:
             text = f.read()
@@ -86,4 +92,18 @@ class PREV:
             logging.info(f"Depparsing {ifile}...({i}/{total})")
             self.run_on_ifile(ifile)
             i += 1
+        return True, None
+
+    def run_interactive(self) -> PREVProcedureResult:
+        while True:
+            try:
+                text = input(">>> ")
+            except (KeyboardInterrupt, EOFError):
+                logging.warning("\npreV existing...")
+                break
+
+            if len(text) == 0:
+                logging.warning("Empty input!")
+            else:
+                self.run_on_text(text)
         return True, None

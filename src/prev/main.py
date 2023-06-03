@@ -32,7 +32,7 @@ class PREVUI:
         self.options: argparse.Namespace = argparse.Namespace()
 
     def create_args_parser(self) -> argparse.ArgumentParser:
-        args_parser = argparse.ArgumentParser(prog="prev")
+        args_parser = argparse.ArgumentParser(prog="preV")
         args_parser.add_argument(
             "--version",
             action="store_true",
@@ -44,6 +44,17 @@ class PREVUI:
             dest="input_file",
             default=None,
             help="Specify a file containing a list of input filenames",
+        )
+        args_parser.add_argument(
+            "--config-file",
+            "-c",
+            dest="config_file",
+            default=None,
+            help=(
+                "Specify file path of the config .py file where you can customize dependency"
+                ' patterns to search. A non-empty "pattern" variable assigning to a list in the'
+                " config file will override the default dependency patterns."
+            ),
         )
         args_parser.add_argument(
             "--expand-wildcards",
@@ -116,6 +127,21 @@ class PREVUI:
             help="Suppress regular logging messages",
         )
         args_parser.add_argument(
+            "--stdout",
+            dest="is_stdout",
+            action="store_true",
+            default=False,
+            help="Output to the standard out instead of saving it to a file.",
+        )
+        args_parser.add_argument(
+            "--interactive",
+            "-I",
+            dest="is_interactive",
+            action="store_true",
+            default=False,
+            help="Run in interactive mode",
+        )
+        args_parser.add_argument(
             "--matching-process",
             dest="n_matching_process",
             default=3,
@@ -126,10 +152,6 @@ class PREVUI:
 
     def parse_args(self, argv: List[str]) -> PREVProcedureResult:
         options, ifile_list = self.args_parser.parse_known_args(argv[1:])
-        if options.is_quiet:
-            logging.basicConfig(format="%(message)s", level=logging.CRITICAL)
-        else:
-            logging.basicConfig(format="%(message)s", level=logging.INFO)
         if options.input_file is not None:
             if not os.path.exists(options.input_file):
                 return False, f"No such file as \n\n{options.input_file}"
@@ -147,15 +169,29 @@ class PREVUI:
                     return (False, f"No such file as \n\n{f}")
             if verified_ifile_list:
                 self.verified_ifile_list = verified_ifile_list
-        # else:
-        #     options.is_refresh = True
+        else:
+            options.is_refresh = True
+
+        if options.is_interactive:
+            options.is_stdout = True
+            options.is_refresh = True
+            options.is_quiet = True
+
+        if options.is_quiet:
+            logging.basicConfig(format="%(message)s", level=logging.WARNING)
+        else:
+            logging.basicConfig(format="%(message)s", level=logging.INFO)
+
         self.init_kwargs = {
             "is_pretokenized": options.is_pretokenized,
             "is_refresh": options.is_refresh,
             "is_no_query": options.is_no_query,
             "is_visualize": options.is_visualize,
+            "is_stdout": options.is_stdout,
+            "is_interactive": options.is_interactive,
             "print_what": options.print_what,
             "n_matching_process": options.n_matching_process,
+            "config_file": options.config_file,
         }
         self.options = options
         return True, None
@@ -202,6 +238,12 @@ class PREVUI:
         extractor = PREV(**self.init_kwargs)
         return extractor.run_on_ifiles(self.verified_ifile_list)  # type:ignore
 
+    def run_interactive(self) -> PREVProcedureResult:
+        from .prev import PREV
+
+        extractor = PREV(**self.init_kwargs)
+        return extractor.run_interactive()
+
     def run(self) -> PREVProcedureResult:
         if self.options.version:
             return self.show_version()
@@ -211,6 +253,8 @@ class PREVUI:
             return self.run_on_text()
         elif self.verified_ifile_list is not None:
             return self.run_on_ifiles()
+        elif self.options.is_interactive:
+            return self.run_interactive()
         else:
             self.args_parser.print_help()
             return True, None

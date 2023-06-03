@@ -3,7 +3,7 @@
 import json
 import logging
 import os
-from typing import Optional
+from typing import Callable, Optional
 
 from spacy.tokens import Doc as Doc_spacy
 from stanza.models.common.doc import Document as Doc_stanza
@@ -16,7 +16,7 @@ class DependencyParser:
         self.is_stanza_initialized = False
         self.is_spacy_initialized = False
 
-    def ensure_stanza_initialized(func):  # type:ignore
+    def ensure_stanza_initialized(func: Callable):  # type:ignore
         def wrapper(self, *args, **kwargs):
             if not self.is_stanza_initialized:
                 logging.info("Initializing Stanza...")
@@ -35,7 +35,7 @@ class DependencyParser:
 
         return wrapper
 
-    def ensure_spacy_initialized(func):  # type:ignore
+    def ensure_spacy_initialized(func: Callable):  # type:ignore
         def wrapper(self, *args, **kwargs):
             if not self.is_spacy_initialized:
                 logging.info("Initializing spaCy...")
@@ -48,9 +48,9 @@ class DependencyParser:
 
         return wrapper
 
-    @ensure_stanza_initialized  # type:ignore
+    @ensure_stanza_initialized
     def _postag(self, text: str):
-        logging.info(f"POS tagging...")
+        logging.info("POS tagging...")
         return self.nlp_stanza(text)  # type:ignore
 
     def postag(self, text: str, ifile_prefix: str):
@@ -69,7 +69,7 @@ class DependencyParser:
         return doc_stanza
 
     def stanza2spacy(self, doc_stanza):
-        logging.info("Converting doc_stanza to doc_spacy...")
+        logging.debug("Converting doc_stanza to doc_spacy...")
         words_stanza = list(doc_stanza.iter_words())  # type:ignore
 
         words = [word.text for word in words_stanza]
@@ -98,7 +98,7 @@ class DependencyParser:
         )
         return doc_spacy
 
-    @ensure_spacy_initialized  # type:ignore
+    @ensure_spacy_initialized
     def _depparse(self, text: str, ifile_prefix: str):
         ofile_depparsed = ifile_prefix + "_dep-parsed.json"
         if os.path.exists(ofile_depparsed) and not self.is_refresh:
@@ -112,7 +112,7 @@ class DependencyParser:
             doc_stanza = self.postag(text, ifile_prefix)  # type:ignore
             doc_spacy = self.stanza2spacy(doc_stanza)
 
-            logging.info(f"Dependency parsing...")
+            logging.info("Dependency parsing...")
             doc_spacy = self.nlp_spacy(doc_spacy)  # type:ignore
 
             logging.info(f"Saving parse trees in {ofile_depparsed}.")
@@ -130,6 +130,6 @@ class DependencyParser:
 
         logging.info(f"Processing {ifile}...")
 
-        ifile_prefix = ifile.split(".")[0]
+        ifile_prefix = os.path.splitext(ifile)[0]
         doc_spacy = self._depparse(text, ifile_prefix)  # type:ignore
         return doc_spacy

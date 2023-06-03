@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding=utf-8 -*-
 import logging
-from typing import List
 from multiprocessing import Pool
+from typing import List, Optional
 
 from spacy.matcher import DependencyMatcher
 from spacy.tokens import Doc as Doc_spacy
@@ -10,16 +10,32 @@ from spacy.tokens.span import Span
 
 
 class Querier:
-    def __init__(self, n_matching_process:int=3):
+    def __init__(self, n_matching_process: int = 3, custom_pattern_path: Optional[str] = None):
         self.n_matching_process = n_matching_process
         # fmt: off
         preps = ["about", "across", "against", "as", "for", "into", "of", "over", "through", "under", "with"]
         # fmt: on
-        self.patterns = self.generate_patterns(preps)
+        self.patterns = self.generate_patterns(preps, custom_pattern_path)
+        self.is_use_custom_patterns = False
 
     # {{{
-    def generate_patterns(self, preps: List[str]) -> List[List[dict]]:
+    def generate_patterns(
+        self, preps: List[str], custom_pattern_path: Optional[str] = None
+    ) -> List[List[dict]]:
         patterns = [
+            [  # {{{
+                {
+                    "RIGHT_ID": "verb",
+                    "RIGHT_ATTRS": {"TAG": {"REGEX": "^VB"}},
+                },
+                {
+                    "LEFT_ID": "verb",
+                    "REL_OP": ">+",
+                    # B is a right immediate child of A, i.e., A > B and A.i == B.i -1
+                    "RIGHT_ID": "prep",
+                    "RIGHT_ATTRS": {"ORTH": {"IN": preps}, "DEP": "prep"},
+                },
+            ],  # }}}
             [  # {{{
                 # 1. POS=ADP and DEP=prt,
                 #    e.g., His face lit up with pleasure. (Francis et al., 1996: 347)
@@ -65,19 +81,6 @@ class Querier:
                 {
                     "LEFT_ID": "advmod",
                     "REL_OP": "<+",
-                    "RIGHT_ID": "prep",
-                    "RIGHT_ATTRS": {"ORTH": {"IN": preps}, "DEP": "prep"},
-                },
-            ],  # }}}
-            [  # {{{
-                {
-                    "RIGHT_ID": "verb",
-                    "RIGHT_ATTRS": {"TAG": {"REGEX": "^VB"}},
-                },
-                {
-                    "LEFT_ID": "verb",
-                    "REL_OP": ">+",
-                    # B is a right immediate child of A, i.e., A > B and A.i == B.i -1
                     "RIGHT_ID": "prep",
                     "RIGHT_ATTRS": {"ORTH": {"IN": preps}, "DEP": "prep"},
                 },
@@ -136,6 +139,16 @@ class Querier:
                 },
             ],  # }}}
         ]
+        if custom_pattern_path is not None:
+            try:
+                with open(custom_pattern_path, "r", encoding="utf-8") as f:
+                    config = {}
+                    exec(f.read(), config)
+                if config["patterns"] and isinstance(config["patterns"], list):
+                    patterns = config["patterns"]
+                    self.is_use_custom_patterns = True
+            except FileNotFoundError:
+                logging.warning(f"{custom_pattern_path} does not exist. Using default patterns.")
         return patterns
 
     # }}}
@@ -160,7 +173,7 @@ class Querier:
             _, token_ids = match
             verb_id = token_ids[0]
 
-            if self.check_passive(verb_id, sent_spacy):
+            if not self.is_use_custom_patterns and self.check_passive(verb_id, sent_spacy):
                 continue
 
             for i in range(len(token_ids)):
@@ -197,7 +210,10 @@ class Querier:
 
         array_head = doc_spacy._get_array_attrs()
         array = doc_spacy.to_array(array_head)
-        sents = [sent_spacy.as_doc(array_head=array_head, array=array) for sent_spacy in doc_spacy.sents]
+        sents = [
+            sent_spacy.as_doc(array_head=array_head, array=array)
+            for sent_spacy in doc_spacy.sents
+        ]
 
         logging.info("Matching...")
         with Pool(self.n_matching_process) as p:
