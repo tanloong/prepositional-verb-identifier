@@ -6,10 +6,8 @@ from setuptools.command.install import install as install_
 class InstallCommand(install_):
     def run(self):
         install_.run(self)
-        from stanza import download as download_stanza
         from spacy.cli import download as download_spacy
-        download_stanza("en", resources_url="stanfordnlp")
-        download_spacy("en_core_web_sm", False, False, "--exists-action", "i", "--user", "--no-deps")
+        download_spacy("en_core_web_trf", False, False, "--exists-action", "i", "--user", "--no-deps")
 
 with open("./README.md", "r", encoding="utf-8") as f:
     long_description = f.read()
@@ -28,7 +26,7 @@ setuptools.setup(
     description="Prepositional Verb Identifier",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    install_requires=['stanza', 'spacy>=3.5.1'],
+    install_requires=['spacy>=3.5.1'],
     classifiers=[
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.9",

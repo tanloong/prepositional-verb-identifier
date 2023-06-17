@@ -32,7 +32,7 @@ class PREVUI:
         self.options: argparse.Namespace = argparse.Namespace()
 
     def create_args_parser(self) -> argparse.ArgumentParser:
-        args_parser = argparse.ArgumentParser(prog="preV")
+        args_parser = argparse.ArgumentParser(prog="prev")
         args_parser.add_argument(
             "--version",
             action="store_true",

@@ -34,7 +34,7 @@ class PREV:
         self.is_interactive = is_interactive
         self.print_what = print_what
 
-        self.depparser = DependencyParser(self.is_pretokenized, self.is_refresh)
+        self.depparser = DependencyParser(is_pretokenized=self.is_pretokenized, is_refresh=self.is_refresh)
         self.querier = Querier(n_matching_process, config_file)
 
     def draw_tree(self, sent_spacy: Span, ifile: str) -> None:
