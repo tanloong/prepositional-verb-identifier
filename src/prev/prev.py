@@ -69,6 +69,7 @@ class PREV:
                 if not self.is_stdout:
                     if ofile is None:
                         ofile = f"cmdline_text.{self.print_what}"
+                        logging.info(f"Done. Results have been written in {ofile}.")
                     with open(ofile, "w", encoding="utf-8") as f:
                         f.write(result)
                 else:
@@ -92,6 +93,8 @@ class PREV:
             logging.info(f"Depparsing {ifile}...({i}/{total})")
             self.run_on_ifile(ifile)
             i += 1
+
+        logging.info(f"Done. Results have been saved as *.matched, under the same directory as input files.")
         return True, None
 
     def run_interactive(self) -> PREVProcedureResult:
