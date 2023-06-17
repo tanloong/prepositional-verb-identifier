@@ -6,6 +6,8 @@ clean:
 	rm -rf __pycache__
 	rm -rf tests/__pycache__
 	rm -rf src/prev/__pycache__
+	rm -rf src/*.matched
+	rm -rf src/*.json
 	rm -rf build/
 	rm -rf dist/
 	rm -rf src/prev.egg-info
