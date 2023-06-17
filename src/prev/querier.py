@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding=utf-8 -*-
 import logging
-from multiprocessing import Pool
 from typing import List, Optional
 
 from spacy.matcher import DependencyMatcher
@@ -216,7 +215,6 @@ class Querier:
         ]
 
         logging.info("Matching...")
-        with Pool(self.n_matching_process) as p:
-            result = "".join(p.map(self.match_sent, sents))
+        result = "".join(map(self.match_sent, sents))
 
         return result
