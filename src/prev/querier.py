@@ -2,10 +2,6 @@
 import logging
 from typing import List, Optional
 
-from spacy.matcher import DependencyMatcher
-from spacy.tokens import Doc as Doc_spacy
-from spacy.tokens.span import Span
-
 
 class Querier:
     def __init__(self, n_matching_process: int = 3, custom_pattern_path: Optional[str] = None):
@@ -151,7 +147,7 @@ class Querier:
 
     # }}}
 
-    def check_passive(self, verb_id: int, sent_spacy: Span) -> bool:
+    def check_passive(self, verb_id: int, sent_spacy) -> bool:
         # https://universaldependencies.org/en/feat/Voice.html#voice-voice
         is_passive = False
 
@@ -162,7 +158,7 @@ class Querier:
                     break
         return is_passive
 
-    def parse_matches(self, matches: List[tuple], pattern: List[dict], sent_spacy: Span) -> str:
+    def parse_matches(self, matches: List[tuple], pattern: List[dict], sent_spacy) -> str:
         # matches: [(match_id, [token_id1, token_id2, token_id3, token_id4]), ...]
         # each token_id corresponds to one pattern dict
         result = ""
@@ -181,7 +177,7 @@ class Querier:
             result += "\n"
         return result
 
-    def match_sent(self, sent_spacy: Span):
+    def match_sent(self, sent_spacy):
         result = ""
 
         for pattern in self.patterns:
@@ -200,7 +196,9 @@ class Querier:
 
         return result
 
-    def match(self, doc_spacy: Doc_spacy, print_what: str):
+    def match(self, doc_spacy, print_what: str):
+        from spacy.matcher import DependencyMatcher
+
         assert print_what in ("matched", "unmatched"), f"Unexpected print_what: {print_what}"
 
         self.matcher = DependencyMatcher(doc_spacy.vocab)
@@ -208,10 +206,7 @@ class Querier:
 
         array_head = doc_spacy._get_array_attrs()
         array = doc_spacy.to_array(array_head)
-        sents = [
-            sent_spacy.as_doc(array_head=array_head, array=array)
-            for sent_spacy in doc_spacy.sents
-        ]
+        sents = [sent_spacy.as_doc(array_head=array_head, array=array) for sent_spacy in doc_spacy.sents]
 
         logging.info("Matching...")
         result = "".join(map(self.match_sent, sents))

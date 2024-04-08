@@ -4,8 +4,6 @@ import logging
 import os
 from typing import Callable, Optional
 
-from spacy.tokens import Doc as Doc_spacy
-
 
 class DependencyParser:
     def __init__(
@@ -33,14 +31,16 @@ class DependencyParser:
 
         return wrapper
 
-    def _json2spacy(self, json_path: str) -> Doc_spacy:
+    def _json2spacy(self, json_path: str):
+        from spacy.tokens import Doc as Doc_spacy
+
         with open(json_path, encoding="utf-8") as f:
             doc_spacy = Doc_spacy(self.nlp_spacy.vocab).from_json(  # type:ignore
                 json.load(f)
             )
         return doc_spacy
 
-    def _spacy2json(self, doc_spacy: Doc_spacy, json_path: str):
+    def _spacy2json(self, doc_spacy, json_path: str):
         with open(json_path, "w") as f:
             f.write(json.dumps(doc_spacy.to_json()))
 

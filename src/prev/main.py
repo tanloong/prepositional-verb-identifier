@@ -12,7 +12,7 @@
 
 # The package takes plain English text as input and outputs instances of "verb + preposition + noun groups" where the verb dominates the preposition.
 
-# For example, it will find "goes over" in "She goes over the question". However, it may not identify "goes over" in the sentence "Someone goes over there" because the "goes over" here is not used as a phrasal verb but in the literal meaning.
+# For example, it will find "goes over" in "She goes over the question". However, it does not identify "goes over" in the sentence "Someone goes over there" because the "goes over" here is not used as a phrasal verb but in the literal meaning.
 
 import argparse
 import glob
