@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding=utf-8 -*-
 import logging
 import os
 import sys
@@ -34,7 +33,9 @@ class PREV:
         self.is_interactive = is_interactive
         self.print_what = print_what
 
-        self.depparser = DependencyParser(is_pretokenized=self.is_pretokenized, is_refresh=self.is_refresh)
+        self.depparser = DependencyParser(
+            is_pretokenized=self.is_pretokenized, is_refresh=self.is_refresh
+        )
         self.querier = Querier(n_matching_process, config_file)
 
     def draw_tree(self, sent_spacy: Span, ifile: str) -> None:
@@ -82,7 +83,7 @@ class PREV:
         #     logging.info(f"{ofile} already exists, skipped.")
         #     return True, None
         logging.info(f"Matching against {ifile}...")
-        with open(ifile, "r", encoding="utf-8") as f:
+        with open(ifile, encoding="utf-8") as f:
             text = f.read()
         return self.run_on_text(text, ifile, ofile)
 
@@ -94,7 +95,10 @@ class PREV:
             self.run_on_ifile(ifile)
             i += 1
 
-        logging.info(f"Done. Results have been saved as *.matched, under the same directory as input files.")
+        logging.info(
+            "Done. Results have been saved as *.matched, under the same directory as input"
+            " files."
+        )
         return True, None
 
     def run_interactive(self) -> PREVProcedureResult:

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding=utf-8 -*-
 import json
 import logging
 import os
@@ -9,7 +8,12 @@ from spacy.tokens import Doc as Doc_spacy
 
 
 class DependencyParser:
-    def __init__(self, model: str = "en_core_web_trf", is_pretokenized: bool = False, is_refresh: bool = False):
+    def __init__(
+        self,
+        model: str = "en_core_web_trf",
+        is_pretokenized: bool = False,
+        is_refresh: bool = False,
+    ):
         self.model = model
         self.is_pretokenized = is_pretokenized
         self.is_refresh = is_refresh
@@ -29,14 +33,14 @@ class DependencyParser:
 
         return wrapper
 
-    def _json2spacy(self, json_path:str) -> Doc_spacy:
-        with open(json_path, "r", encoding="utf-8") as f:
+    def _json2spacy(self, json_path: str) -> Doc_spacy:
+        with open(json_path, encoding="utf-8") as f:
             doc_spacy = Doc_spacy(self.nlp_spacy.vocab).from_json(  # type:ignore
                 json.load(f)
             )
         return doc_spacy
 
-    def _spacy2json(self, doc_spacy:Doc_spacy, json_path:str):
+    def _spacy2json(self, doc_spacy: Doc_spacy, json_path: str):
         with open(json_path, "w") as f:
             f.write(json.dumps(doc_spacy.to_json()))
 
@@ -60,7 +64,7 @@ class DependencyParser:
         if ifile is None:
             ifile = "cmdline_text"
         elif text is None:
-            with open(ifile, "r", encoding="utf-8") as f:
+            with open(ifile, encoding="utf-8") as f:
                 text = f.read()
 
         logging.info(f"Processing {ifile}...")

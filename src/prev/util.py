@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding=utf-8 -*-
 
-from typing import Tuple, Optional
+from typing import Optional, Tuple
 
 PREVProcedureResult = Tuple[bool, Optional[str]]

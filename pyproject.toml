@@ -1,0 +1,82 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "prev"
+dynamic = ["version"]
+license = {text = "GNU GPLv3"}
+authors = [{"name" = "Tan, Long", "email" = "tanloong@foxmail.com"},]
+description = "Search PREpositional Verbs"
+readme = "README.md"
+requires-python = ">=3.7"
+# keywords = []
+classifiers=[
+        "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.7",
+        "Intended Audience :: Science/Research",
+        "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+        "Operating System :: MacOS",
+        "Operating System :: POSIX :: Linux",
+        "Operating System :: Microsoft :: Windows",
+    ]
+
+dependencies=['spacy>=3.7.4', 'en_core_web_trf>=3.7.3'],
+
+[project.urls]
+Homepage = "https://github.com/tanloong/prev"
+# Documentation = "https://readthedocs.org"
+Issues = "https://github.com/tanloong/prev/issues"
+# Changelog = "https://github.com/tanloong/prev/blob/master/CHANGELOG.md"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project.scripts]
+prev = "prev:main"
+
+[tool.setuptools.dynamic]
+version = {attr = "prev.about.__version__"}
+
+# Ruff complete options: https://docs.astral.sh/ruff/settings/#extend
+[tool.ruff]
+line-length = 112
+
+[tool.ruff.lint]
+select = [
+    "E", # pycodestyle
+    "F", # Pyflakes
+    "UP", # pyupgrade
+    "B", # flake8-bugbear
+    "SIM", # flake8-simplify
+    "I", # isort
+]
+ignore = [
+    "E501",
+    "B011",
+    "UP038", # 'isinstance(x, int | float)' causes slower code
+]
+
+[tool.ruff.lint.flake8-type-checking]
+# Add quotes around type annotations, if doing so would allow
+# an import to be moved into a type-checking block.
+quote-annotations = true
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.mypy]
+# https://mypy.readthedocs.io/en/stable/running_mypy.html#missing-library-stubs-or-py-typed-marker
+ignore_missing_imports = true
+
+[tool.pyright]
+reportIncompatibleMethodOverride = false
+reportOptionalMemberAccess = false
+reportGeneralTypeIssues = false

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding=utf-8 -*-
 import logging
 from typing import List, Optional
 
@@ -140,7 +139,7 @@ class Querier:
         ]
         if custom_pattern_path is not None:
             try:
-                with open(custom_pattern_path, "r", encoding="utf-8") as f:
+                with open(custom_pattern_path, encoding="utf-8") as f:
                     config = {}
                     exec(f.read(), config)
                 if config["patterns"] and isinstance(config["patterns"], list):
