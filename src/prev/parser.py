@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
+
 import json
 import logging
 import os
+from itertools import chain as _chain
 from typing import Callable, Optional
 
 
@@ -52,11 +54,25 @@ class DependencyParser:
 
             doc_spacy = self._json2spacy(ofile_depparsed)
         else:
-            logging.info("Dependency parsing...")
-            doc_spacy = self.nlp_spacy(text)  # type:ignore
+            if not self.is_pretokenized:
+                logging.debug("Dependency parsing raw text...")
+                doc_spacy = self.nlp_spacy(text)  # type:ignore
+            else:
+                from spacy.tokens import Doc as Doc_spacy
+
+                list_of_words: list[list[str]] = tuple(line.split() for line in text.split("\n"))
+                flatten_words: list[str] = list(_chain.from_iterable(list_of_words))
+                sent_starts: list[bool] = [i == 0 for words in list_of_words for i in range(len(words))]
+                doc_spacy = Doc_spacy(self.nlp_spacy.vocab, words=flatten_words, sent_starts=sent_starts)
+                logging.debug("Dependency parsing pretokenized text...")
+                doc_spacy = self.nlp_spacy(doc_spacy)
 
             logging.info(f"Saving parse trees in {ofile_depparsed}.")
             self._spacy2json(doc_spacy, ofile_depparsed)
+        # for s in doc_spacy.sents:
+        #     for t in s:
+        #         print(t.text, t.pos_, t.tag_, t.morph, end=" ", sep="_")
+        #     print()
         return doc_spacy
 
     def depparse(self, text: Optional[str] = None, ifile: Optional[str] = None):

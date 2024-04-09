@@ -39,6 +39,20 @@ class PREVUI:
             help="Show version and exit.",
         )
         args_parser.add_argument(
+            "--quiet",
+            dest="is_quiet",
+            action="store_true",
+            default=False,
+            help="disable all loggings",
+        )
+        args_parser.add_argument(
+            "--verbose",
+            dest="is_verbose",
+            action="store_true",
+            default=False,
+            help="enable verbose loggings",
+        )
+        args_parser.add_argument(
             "--input-file",
             dest="input_file",
             default=None,
@@ -119,13 +133,6 @@ class PREVUI:
             ),
         )
         args_parser.add_argument(
-            "--quiet",
-            dest="is_quiet",
-            action="store_true",
-            default=False,
-            help="Suppress regular logging messages",
-        )
-        args_parser.add_argument(
             "--stdout",
             dest="is_stdout",
             action="store_true",
@@ -151,6 +158,16 @@ class PREVUI:
 
     def parse_args(self, argv: List[str]) -> PREVProcedureResult:
         options, ifile_list = self.args_parser.parse_known_args(argv[1:])
+        assert not (
+            options.is_quiet and options.is_verbose
+        ), "logging cannot be quiet and verbose at the same time"
+        if options.is_quiet:
+            logging.basicConfig(format="%(message)s", level=logging.CRITICAL)
+        elif options.is_verbose:
+            logging.basicConfig(format="%(message)s", level=logging.DEBUG)
+        else:
+            logging.basicConfig(format="%(message)s", level=logging.INFO)
+
         if options.input_file is not None:
             if not os.path.exists(options.input_file):
                 return False, f"No such file as \n\n{options.input_file}"

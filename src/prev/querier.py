@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
+
 import logging
-from typing import List, Optional
+from typing import Generator, List, Optional
 
 
 class Querier:
@@ -158,42 +159,43 @@ class Querier:
                     break
         return is_passive
 
-    def parse_matches(self, matches: List[tuple], pattern: List[dict], sent_spacy) -> str:
+    def parse_matches(
+        self, matches: List[tuple], pattern: List[dict], sent_spacy
+    ) -> Generator[str, None, None]:
         # matches: [(match_id, [token_id1, token_id2, token_id3, token_id4]), ...]
         # each token_id corresponds to one pattern dict
-        result = ""
-
+        results: list[str] = []
         for match in matches:
             _, token_ids = match
-            verb_id = token_ids[0]
+            first_node_id = token_ids[0]
 
-            if not self.is_use_custom_patterns and self.check_passive(verb_id, sent_spacy):
+            if not self.is_use_custom_patterns and self.check_passive(first_node_id, sent_spacy):
                 continue
 
             for i in range(len(token_ids)):
                 right_id = pattern[i]["RIGHT_ID"]
                 node = sent_spacy[token_ids[i]]
-                result += f"{right_id}: {node.text}_{node.lemma_}, "
-            result += "\n"
-        return result
+                results.append(f"{right_id}: {node.text}_{node.lemma_}")
+            yield ", ".join(results)
+            results.clear()
 
     def match_sent(self, sent_spacy):
-        result = ""
+        logging.debug(f"Matching sentence: {sent_spacy}")
+        results: list[str] = []
 
         for pattern in self.patterns:
             if self.matcher.get("preps") is not None:
                 self.matcher.remove("preps")
             self.matcher.add("preps", [pattern])
 
-            matches = self.matcher(sent_spacy)
-            result += self.parse_matches(matches, pattern, sent_spacy)
+            if matches := self.matcher(sent_spacy):
+                results.append("\n".join(self.parse_matches(matches, pattern, sent_spacy)))
 
-        result = result.strip()
+        result: str = "\n".join(results)
         if self.print_what == "matched" and result:
             result = f"{sent_spacy.text}\n{result}\n\n"
         elif self.print_what == "unmatched" and not result:
             result = f"{sent_spacy.text}\n"
-
         return result
 
     def match(self, doc_spacy, print_what: str):
@@ -209,6 +211,6 @@ class Querier:
         sents = [sent_spacy.as_doc(array_head=array_head, array=array) for sent_spacy in doc_spacy.sents]
 
         logging.info("Matching...")
-        result = "".join(map(self.match_sent, sents))
+        result = "".join(map(self.match_sent, sents)).rstrip() + "\n"
 
         return result
