@@ -15,6 +15,7 @@ clean:
 	rm -rf coverage.xml
 	rm -f *.json
 	rm -rf *_trees
+	rm -rf src/*_trees
 	rm -f *.matched
 
 build:

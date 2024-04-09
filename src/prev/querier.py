@@ -5,8 +5,8 @@ from typing import Generator, List, Optional
 
 
 class Querier:
-    def __init__(self, n_matching_process: int = 3, custom_pattern_path: Optional[str] = None):
-        self.n_matching_process = n_matching_process
+    def __init__(self, n_process: int = 3, custom_pattern_path: Optional[str] = None):
+        self.n_process = n_process
         # fmt: off
         preps = ["about", "across", "against", "as", "for", "into", "of", "over", "through", "under", "with"]
         # fmt: on

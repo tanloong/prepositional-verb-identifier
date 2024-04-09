@@ -78,5 +78,5 @@ ignore_missing_imports = true
 
 [tool.pyright]
 reportIncompatibleMethodOverride = false
-reportOptionalMemberAccess = false
+reportOptionalMemberAccess = true
 reportGeneralTypeIssues = false

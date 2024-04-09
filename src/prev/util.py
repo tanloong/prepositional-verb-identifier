@@ -2,4 +2,4 @@
 
 from typing import Optional, Tuple
 
-PREVProcedureResult = Tuple[bool, Optional[str]]
+Prev_Procedure_Result = Tuple[bool, Optional[str]]
