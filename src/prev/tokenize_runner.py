@@ -73,6 +73,8 @@ class Tokenize_Runner:
         return True, None
 
     def interact(self) -> Prev_Procedure_Result:
+        import readline
+
         while True:
             try:
                 text = input(">>> ")
